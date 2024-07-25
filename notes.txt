@@ -1,0 +1,30 @@
+ul#products_grid li h2 a
+
+
+GET https://www.fahasa.com/fahasa_catalog/product/loadproducts?category_id=9&currentPage=1&limit=48&order=num_orders&series_type=0
+
+
+'User-Agent': 'PostmanRuntime/7.36.0',
+'Accept': '*/*',
+'Host': 'www.fahasa.com',
+'Accept-Encoding': 'gzip, deflate, br',
+'Connection': 'keep-alive',
+
+
+
+
+
+'Postman-Token': '485d48fc-494f-4747-925b-4bfac9067eb8',
+Cookie: frontend=38d2ed1b24754475881f4abb5e128a28
+
+
+.fhs_menu_content > div:nth-child(2) > div:nth-child(1)
+div.catalog_menu_dropdown.fhs_dropdown div.fhs_stretch_stretch div.fhs_column_stretch div.fhs_menu_content.fhs_column_left div.row
+
+
+pip3 install venv 
+
+python3 -m venv myenv
+
+source myenv/bin/activate
+

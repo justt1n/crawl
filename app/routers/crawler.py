@@ -4,27 +4,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.models.context_request import ContextRequest
 from app.services.google_sheets import GoogleSheetsService
 from app.services.context_manager import ContextManager
+from app.constants import CRAWL_CONTEXTS
 
 router = APIRouter()
 
 
-def get_google_sheets_service():
-    # Replace with actual initialization logic
-    return GoogleSheetsService(credentials="credentials.json", spreadsheet_id="")
-
-
 def get_context_manager():
-    return ContextManager()
+    context_instances = {name: context() for name, context in CRAWL_CONTEXTS.items()}
+    return ContextManager(context_instances)
 
 
 @router.post("/crawl/")
 def trigger_crawler(
-        context_request: ContextRequest,
-        google_sheets_service: GoogleSheetsService = Depends(get_google_sheets_service),
-        context_manager: ContextManager = Depends(get_context_manager)
+        request: ContextRequest,
 ):
     try:
-        context = context_manager.get_context(context_request.context_name)
+        google_sheets_service = GoogleSheetsService(sheet_name=request.sheet_name)
+        ctx_manager = get_context_manager()
+        context = ctx_manager.get_context(request.context_name)
         if context is None:
             raise HTTPException(status_code=404, detail="Context not found")
 

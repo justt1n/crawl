@@ -5,10 +5,6 @@ from app.constants import CRAWL_CONTEXTS
 
 app = FastAPI()
 
-context_manager = ContextManager()
-
-for context in CRAWL_CONTEXTS:
-    context_manager.register_context(context, CRAWL_CONTEXTS[context])
 
 app.include_router(crawler.router, prefix="/api", tags=["crawler"])
 

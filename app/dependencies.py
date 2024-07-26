@@ -3,6 +3,7 @@ from app.services.context_manager import ContextManager
 
 context_manager = ContextManager()
 
+
 def get_context(context_name: str):
     context = context_manager.get_context(context_name)
     if context is None:

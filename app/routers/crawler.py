@@ -10,7 +10,7 @@ router = APIRouter()
 
 def get_google_sheets_service():
     # Replace with actual initialization logic
-    return GoogleSheetsService(credentials="your-credentials", spreadsheet_id="your-spreadsheet-id")
+    return GoogleSheetsService(credentials="credentials.json", spreadsheet_id="")
 
 
 def get_context_manager():

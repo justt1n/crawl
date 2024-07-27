@@ -1,48 +1,98 @@
 import os.path
 
 from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+def _authenticate():
+    creds = None
+    credentials = 'credentials.json'
+    if os.path.exists(credentials):
+        creds = service_account.Credentials.from_service_account_file(credentials)
+    else:
+        return None
+    return build('sheets', 'v4', credentials=creds)
+
+
+def get_spreadsheet_id_by_name(name: str):
+    creds = None
+    credentials = 'credentials.json'
+    if os.path.exists(credentials):
+        creds = service_account.Credentials.from_service_account_file(credentials)
+    drive_service = build('drive', 'v3', credentials=creds)
+    response = drive_service.files().list(
+        q=f"name='{name}' and mimeType='application/vnd.google-apps.spreadsheet'",
+        spaces='drive',
+        fields='files(id, name)',
+    ).execute()
+    for file in response.get('files', []):
+        if file.get('name') == name:
+            return file.get('id')
+    return None
+
+def get_folder_id_by_name(name: str):
+    creds = None
+    credentials = 'credentials.json'
+    if os.path.exists(credentials):
+        creds = service_account.Credentials.from_service_account_file(credentials)
+    drive_service = build('drive', 'v3', credentials=creds)
+    response = drive_service.files().list(
+        q=f"name='{name}' and mimeType='application/vnd.google-apps.folder'",
+        spaces='drive',
+        fields='files(id, name)',
+    ).execute()
+    for file in response.get('files', []):
+        if file.get('name') == name:
+            return file.get('id')
+
+    file_metadata = {
+        'name': name,
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    file = drive_service.files().create(body=file_metadata).execute()
+    return file.get('id')
+
+def create_new_sheet(name: str):
+    creds = None
+    credentials = 'credentials.json'
+    if os.path.exists(credentials):
+        creds = service_account.Credentials.from_service_account_file(credentials)
+    drive_service = build('drive', 'v3', credentials=creds)
+    file_metadata = {
+        'name': name,
+        'mimeType': 'application/vnd.google-apps.spreadsheet',
+        'parents': get_folder_id_by_name('GG Cloud')
+    }
+    folder_id = get_folder_id_by_name('AppCrawler')
+    folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
+    file = drive_service.files().create(body=file_metadata).execute()
+    return file.get('id')
 
 
 class GoogleSheetsService:
 
-    def __init__(self, credentials: str, spreadsheet_id: str):
-        self.credentials = credentials
-        self.spreadsheet_id = spreadsheet_id
-        self.client = self._authenticate()
+    def __init__(self, sheet_name: str):
+        self.sheet_name = sheet_name
+        self.spreadsheet_id = "1v2TP7pZyM0P0gD6mo3aC5YH-t4gfe4PTOEMILfeLDEQ"
+        if self.spreadsheet_id is None:
+            self.spreadsheet_id = create_new_sheet(sheet_name)
+        self.client = _authenticate()
 
-    def _authenticate(self):
-        creds = None
-        if os.path.exists(self.credentials):
-            creds = Credentials.from_authorized_user_file(self.credentials, SCOPES)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(self.credentials, SCOPES)
-                creds = flow.run_local_server(port=0)
-            with open(self.credentials, 'w') as token:
-                token.write(creds.to_json())
-        return build('sheets', 'v4', credentials=creds)
-
-    def save_data(self, data: dict):
+    def save_data(self, csvdata: dict):
         try:
-            # Open the spreadsheet
-            spreadsheet = self.client.spreadsheets()
-            # Select the first sheet
-            sheet = spreadsheet.values()
-            # Append the data to the sheet
-            values = [list(data.values())]
-            body = {
-                'values': values
-            }
-            result = sheet.append(spreadsheetId=self.spreadsheet_id, range="Sheet1!A1",
-                                  valueInputOption="RAW", body=body).execute()
-            print(f"{result.get('updates').get('updatedCells')} cells appended.")
+            for data in csvdata:
+                values = [list(data.values())]
+                body = {
+                    'values': values
+                }
+                result = self.client.spreadsheets().values().append(
+                    spreadsheetId=self.spreadsheet_id,
+                    range="Sheet1!A1",
+                    valueInputOption="RAW",
+                    body=body
+                ).execute()
+                print(f"{result.get('updates').get('updatedCells')} cells appended.")
         except HttpError as e:
             print(f"An error occurred: {e}")

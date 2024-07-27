@@ -33,46 +33,50 @@ def get_spreadsheet_id_by_name(name: str):
             return file.get('id')
     return None
 
-
-
-
-def create_folder(name: str):
-    creds, _ = google.auth.default()
+def get_folder_id_by_name(name: str):
+    creds = None
+    credentials = 'credentials.json'
+    if os.path.exists(credentials):
+        creds = service_account.Credentials.from_service_account_file(credentials)
     drive_service = build('drive', 'v3', credentials=creds)
+    response = drive_service.files().list(
+        q=f"name='{name}' and mimeType='application/vnd.google-apps.folder'",
+        spaces='drive',
+        fields='files(id, name)',
+    ).execute()
+    for file in response.get('files', []):
+        if file.get('name') == name:
+            return file.get('id')
+
     file_metadata = {
         'name': name,
         'mimeType': 'application/vnd.google-apps.folder'
     }
-    folder = drive_service.files().create(body=file_metadata).execute()
-    return folder.get('id')
+    file = drive_service.files().create(body=file_metadata).execute()
+    return file.get('id')
 
-
-def create(title: str, folder_name: str):
-    creds, _ = google.auth.default()
-    try:
-        service = build("sheets", "v4", credentials=creds)
-        folder_id = create_folder(folder_name)
-        spreadsheet = {
-            "properties": {"title": title},
-            "parents": [folder_id]
-        }
-        spreadsheet = (
-            service.spreadsheets()
-            .create(body=spreadsheet, fields="spreadsheetId")
-            .execute()
-        )
-        print(f"Spreadsheet ID: {(spreadsheet.get('spreadsheetId'))}")
-        return spreadsheet.get("spreadsheetId")
-    except HttpError as error:
-        print(f"An error occurred: {error}")
-        return error
+def create_new_sheet(name: str):
+    creds = None
+    credentials = 'credentials.json'
+    if os.path.exists(credentials):
+        creds = service_account.Credentials.from_service_account_file(credentials)
+    drive_service = build('drive', 'v3', credentials=creds)
+    file_metadata = {
+        'name': name,
+        'mimeType': 'application/vnd.google-apps.spreadsheet',
+        'parents': get_folder_id_by_name('GG Cloud')
+    }
+    folder_id = get_folder_id_by_name('AppCrawler')
+    folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
+    file = drive_service.files().create(body=file_metadata).execute()
+    return file.get('id')
 
 
 class GoogleSheetsService:
 
     def __init__(self, sheet_name: str):
         self.sheet_name = sheet_name
-        self.spreadsheet_id = get_spreadsheet_id_by_name(sheet_name)
+        self.spreadsheet_id = "1v2TP7pZyM0P0gD6mo3aC5YH-t4gfe4PTOEMILfeLDEQ"
         if self.spreadsheet_id is None:
             self.spreadsheet_id = create_new_sheet(sheet_name)
         self.client = _authenticate()

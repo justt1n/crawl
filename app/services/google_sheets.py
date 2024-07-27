@@ -6,7 +6,6 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-
 def _authenticate():
     creds = None
     credentials = 'credentials.json'
@@ -81,18 +80,19 @@ class GoogleSheetsService:
             self.spreadsheet_id = create_new_sheet(sheet_name)
         self.client = _authenticate()
 
-    def save_data(self, data: dict):
+    def save_data(self, csvdata: dict):
         try:
-            values = [list(data.values())]
-            body = {
-                'values': values
-            }
-            result = self.client.spreadsheets().values().append(
-                spreadsheetId=self.spreadsheet_id,
-                range="Sheet1!A1",
-                valueInputOption="RAW",
-                body=body
-            ).execute()
-            print(f"{result.get('updates').get('updatedCells')} cells appended.")
+            for data in csvdata:
+                values = [list(data.values())]
+                body = {
+                    'values': values
+                }
+                result = self.client.spreadsheets().values().append(
+                    spreadsheetId=self.spreadsheet_id,
+                    range="Sheet1!A1",
+                    valueInputOption="RAW",
+                    body=body
+                ).execute()
+                print(f"{result.get('updates').get('updatedCells')} cells appended.")
         except HttpError as e:
             print(f"An error occurred: {e}")
